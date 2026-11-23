@@ -1,0 +1,56 @@
+name: jaga_tani
+description: "Jaga Tani - Aplikasi Cerdas Manajemen Pertanian Berbasis IoT"
+publish_to: "none"
+
+version: 1.0.0+1
+
+environment:
+  sdk: ">=3.0.0 <4.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # Navigation
+  go_router: ^13.0.0
+
+  # State Management
+  provider: ^6.1.1
+
+  # Charts
+  fl_chart: ^0.68.0
+
+  # Icons
+  iconsax: ^0.0.8
+
+  # Fonts
+  google_fonts: ^6.1.0
+
+  # UI Utilities
+  smooth_page_indicator: ^1.1.0
+  percent_indicator: ^4.2.3
+
+  # Image
+  image_picker: ^1.0.7
+
+  # Animation
+  lottie: ^3.1.0
+
+  # Utilities
+  intl: ^0.18.0
+  shared_preferences: ^2.2.2
+  http: ^1.2.0
+  mqtt_client: ^10.3.0
+
+  cupertino_icons: ^1.0.8
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/images/
+    - assets/icons/
