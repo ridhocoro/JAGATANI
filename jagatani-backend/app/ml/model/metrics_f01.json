@@ -1,0 +1,36 @@
+{
+  "fitur_id": "F-01",
+  "nama_fitur": "Prediksi kelembaban tanah 24 jam ke depan",
+  "tanggal_latih": "2026-11-23 19:51:22.226810",
+  "jumlah_sampel_latih": 2923,
+  "jumlah_sampel_uji": 627,
+  "perbandingan_model": {
+    "baseline_persistence": {
+      "mae": 5.102,
+      "rmse": 7.659
+    },
+    "linear_regression": {
+      "mae": 4.134,
+      "rmse": 6.458
+    },
+    "random_forest_regressor": {
+      "mae": 4.521,
+      "rmse": 7.257
+    }
+  },
+  "model_terpilih": "linear_regression",
+  "alasan_pemilihan": "Linear Regression Multi-Output dipilih sebagai model produksi karena menghasilkan MAE terendah (4.134%) dan RMSE terendah (6.458%) pada set uji, mengungguli Random Forest (MAE 4.515%) dan Baseline Persistence (MAE 5.102%). Model linier memanfaatkan kombinasi lag dan rolling mean secara optimal tanpa risiko overfitting pada daun pohon regresi, serta memiliki waktu inferensi sub-milidetik (< 1 ms).",
+  "rmse_model_terpilih": 6.458,
+  "mae_model_terpilih": 4.134,
+  "mae_per_horizon": {
+    "1_jam": 0.742,
+    "6_jam": 3.397,
+    "12_jam": 3.703,
+    "24_jam": 6.341
+  },
+  "kriteria_produk": {
+    "target_mae": "<= 5.0 persen poin kelembaban",
+    "hasil_mae_tercapai": 4.134,
+    "status_kriteria": "LOLOS"
+  }
+}

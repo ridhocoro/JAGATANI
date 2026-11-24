@@ -1,0 +1,65 @@
+{
+  "fitur_id": "F-02",
+  "nama_fitur": "Klasifikasi keputusan irigasi (perlu / tidak perlu)",
+  "tanggal_latih": "2026-11-23 19:51:26.143097",
+  "distribusi_sampel": {
+    "train": {
+      "total": 2923,
+      "kelas_0_tidak_perlu": 2899,
+      "kelas_1_perlu": 24,
+      "persen_kelas_1": 0.82
+    },
+    "test": {
+      "total": 627,
+      "kelas_0_tidak_perlu": 615,
+      "kelas_1_perlu": 12,
+      "persen_kelas_1": 1.91
+    }
+  },
+  "perbandingan_model": {
+    "baseline_aturan_ambang": {
+      "precision": 1.0,
+      "recall": 0.667,
+      "f1": 0.8,
+      "accuracy": 0.994,
+      "tp": 8,
+      "fn": 4,
+      "tn": 615,
+      "fp": 0
+    },
+    "logistic_regression": {
+      "precision": 0.7,
+      "recall": 0.583,
+      "f1": 0.636,
+      "accuracy": 0.987,
+      "tp": 7,
+      "fn": 5,
+      "tn": 612,
+      "fp": 3
+    },
+    "random_forest_classifier": {
+      "precision": 1.0,
+      "recall": 0.75,
+      "f1": 0.857,
+      "accuracy": 0.995,
+      "tp": 9,
+      "fn": 3,
+      "tn": 615,
+      "fp": 0
+    }
+  },
+  "model_terpilih": "random_forest_classifier",
+  "alasan_pemilihan": "Random Forest Classifier (balanced) dipilih karena mencapai Recall tertinggi (0.75) dan F1-score (0.857) pada set uji.",
+  "top_fitur_explainability": {
+    "kelembaban_tanah": 0.2347,
+    "soil_h_roll6": 0.1815,
+    "soil_h_lag3": 0.1567,
+    "soil_h_lag1": 0.1407,
+    "soil_h_lag6": 0.1066
+  },
+  "kriteria_produk": {
+    "target_recall_perlu": ">= 0.85",
+    "hasil_recall_tercapai": 0.75,
+    "status_kriteria": "PERLU ITERASI"
+  }
+}

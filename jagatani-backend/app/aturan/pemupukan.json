@@ -1,0 +1,128 @@
+{
+  "versi": "1.2.0",
+  "deskripsi": "Sistem Pakar Rekomendasi Pemupukan JagaTani (F-03)",
+  "terakhir_diperbarui": "2026-11-23",
+  "daftar_pustaka_resmi": [
+    {
+      "id_sitasi": "PERMENTAN-13-2022",
+      "judul": "Peraturan Menteri Pertanian Republik Indonesia Nomor 13 Tahun 2022 tentang Rekomendasi Pemupukan N, P, dan K Spesifik Lokasi untuk Tanaman Padi, Jagung, dan Kedelai pada Lahan Sawah",
+      "penerbit": "Kementerian Pertanian Republik Indonesia",
+      "tahun": 2022,
+      "rujukan_angka": "Dosis anjuran NPK dan Urea ditetapkan berbasis status hara P dan K tanah per kecamatan untuk efisiensi hara dan keberlanjutan lahan."
+    },
+    {
+      "id_sitasi": "BALITSA-KEMENTAN-CABAI",
+      "judul": "Pedoman Umum Pemupukan Berimbang dan Budidaya Tanaman Cabai Merah",
+      "penerbit": "Balai Penelitian Tanaman Sayuran (Balitsa), Badan Litbang Pertanian / BSIP, Kementerian Pertanian RI",
+      "tahun": 2019,
+      "rujukan_angka": "Dosis anjuran NPK 16-16-16 adalah 20–30 gram/tanaman dilarutkan dalam air (kocor) atau 300–400 kg/ha secara bertahap."
+    },
+    {
+      "id_sitasi": "BALITTANAH-PENGAPURAN",
+      "judul": "Petunjuk Teknis Pengelolaan Lahan Masam dan Pengapuran Tanah Pertanian",
+      "penerbit": "Balai Penelitian Tanah (Balittanah), Bogor, Kementerian Pertanian RI",
+      "tahun": 2014,
+      "rujukan_angka": "Pengapuran dengan Kapur Pertanian (Dolomit/CaCO3) takaran 1.0–2.0 ton/ha pada tanah masam (pH < 5.5) sebelum tanam untuk netralisasi kemasaman tanah."
+    },
+    {
+      "id_sitasi": "BPTP-PENCUCIAN-HARA",
+      "judul": "Petunjuk Teknis Pengelolaan Air dan Mitigasi Pencucian Hara Pupuk Musim Hujan",
+      "penerbit": "Balai Pengkajian Teknologi Pertanian (BPTP), Badan Litbang Pertanian, Kementerian Pertanian RI",
+      "tahun": 2017,
+      "rujukan_angka": "Penundaan pemupukan kimia butiran ketika curah hujan harian diprakirakan > 20 mm guna mencegah leaching dan limpasan permukaan."
+    }
+  ],
+  "aturan": [
+    {
+      "id": "R-01",
+      "nama": "Peringatan Tanah Masam (pH Rendah)",
+      "prioritas": 1,
+      "kondisi": {
+        "ph_max": 5.49
+      },
+      "status": "warning",
+      "judul": "pH Tanah Terlalu Masam (< 5.5)",
+      "deskripsi": "Pada pH di bawah 5.5, ketersediaan unsur hara fosfor (P) terikat oleh Al dan Fe bebas, sehingga efisiensi penyerapan pupuk NPK menurun drastis.",
+      "tindakan": "Tunda pemupukan NPK/Urea utama. Lakukan pengapuran menggunakan Dolomit / Kaptan (Kapur Pertanian) 1.0–2.0 ton/ha secara bertahap atau sesuai rekomendasi uji laboratorium tanah.",
+      "rekomendasi_pupuk": false,
+      "sumber": "Balittanah Kementan RI (2014) - Petunjuk Teknis Pengelolaan Lahan Masam dan Pengapuran"
+    },
+    {
+      "id": "R-02",
+      "nama": "Peringatan Tanah Basa (pH Tinggi)",
+      "prioritas": 2,
+      "kondisi": {
+        "ph_min": 7.51
+      },
+      "status": "warning",
+      "judul": "pH Tanah Terlalu Basa (> 7.5)",
+      "deskripsi": "Pada pH di atas 7.5, ketersediaan hara mikro (Fe, Mn, Zn, Cu) terhambat dan fosfor terikat kalsium.",
+      "tindakan": "Konsultasikan dengan penyuluh pertanian setempat sebelum aplikasi pupuk. Hindari penggunaan pupuk pembawa kation basa. Disarankan penambahan bahan organik/kompos matang 2–3 ton/ha.",
+      "rekomendasi_pupuk": false,
+      "sumber": "BPTP Kementan RI - Pedoman Pengelolaan Kesuburan Lahan dan Koreksi pH"
+    },
+    {
+      "id": "R-03",
+      "nama": "Peringatan Prakiraan Hujan Lebat (Risiko Leaching)",
+      "prioritas": 3,
+      "kondisi": {
+        "curah_hujan_24jam_min": 20.0
+      },
+      "status": "warning",
+      "judul": "Prakiraan Hujan Lebat (> 20 mm)",
+      "deskripsi": "Prakiraan cuaca menunjukkan potensi hujan lebat dalam 24 jam ke depan. Aplikasi pupuk padat berisiko tinggi tercuci air limpasan (run-off) dan erosi hara.",
+      "tindakan": "Tunda pemupukan hingga hujan reda dan kondisi drainase lahan stabil (minimal 24–48 jam setelah hujan lebat).",
+      "rekomendasi_pupuk": false,
+      "sumber": "BPTP Kementan RI (2017) - Mitigasi Pencucian Hara Pupuk Musim Hujan"
+    },
+    {
+      "id": "R-04",
+      "nama": "Kelembaban Tanah Rendah (Kekeringan)",
+      "prioritas": 4,
+      "kondisi": {
+        "kelembaban_tanah_max": 29.9,
+        "curah_hujan_6jam_max": 1.0
+      },
+      "status": "warning",
+      "judul": "Kelembaban Tanah Terlalu Rendah (< 30%)",
+      "deskripsi": "Tanah kering tidak menyediakan air yang cukup untuk melarutkan granul pupuk, sehingga konsentrasi garam lokal dapat merusak akar tanaman (plasmolisis).",
+      "tindakan": "Lakukan irigasi lahan terlebih dahulu sampai kelembaban mencapai minimal 45–60%, baru jadwalkan pemupukan setelahnya.",
+      "rekomendasi_pupuk": false,
+      "sumber": "Kementan RI - Prinsip Pemupukan Berimbang dan Ketersediaan Air Tanah"
+    },
+    {
+      "id": "R-05",
+      "nama": "Kondisi Optimal Pemupukan Rutin Spesifik Komoditas",
+      "prioritas": 5,
+      "kondisi": {
+        "ph_min": 5.5,
+        "ph_max": 7.5,
+        "kelembaban_tanah_min": 30.0,
+        "curah_hujan_24jam_max": 19.9
+      },
+      "status": "optimal",
+      "judul": "Kondisi Lahan Sangat Mendukung Pemupukan",
+      "deskripsi": "Kondisi pH tanah netral-optimal (5.5–7.5), kelembaban tanah cukup untuk melarutkan pupuk, dan tidak ada ancaman hujan lebat pencuci hara.",
+      "dosis_per_komoditas": {
+        "zone_a": {
+          "komoditas": "Padi Sawah",
+          "rekomendasi": "Aplikasi NPK 15-15-15 (150–200 kg/ha) ditambah Urea (100–150 kg/ha) saat pagi hari saat stomata terbuka.",
+          "sumber": "Permentan No. 13 Tahun 2022 tentang Rekomendasi Pemupukan N, P, dan K Spesifik Lokasi"
+        },
+        "zone_b": {
+          "komoditas": "Jagung",
+          "rekomendasi": "Aplikasi NPK 15-15-15 (250–300 kg/ha) ditambah Urea (150–200 kg/ha) secara tugal di samping tanaman.",
+          "sumber": "Permentan No. 13 Tahun 2022 tentang Rekomendasi Pemupukan N, P, dan K Spesifik Lokasi"
+        },
+        "zone_c": {
+          "komoditas": "Cabai Merah",
+          "rekomendasi": "Aplikasi NPK 16-16-16 (20–30 g/tanaman dikocorkan dilarutkan dalam air) atau 300–400 kg/ha secara bertahap.",
+          "sumber": "Balitsa Kementan RI - Pedoman Pemupukan Berimbang Tanaman Cabai Merah"
+        }
+      },
+      "tindakan": "Aplikasi pupuk berimbang sesuai dosis spesifik komoditas di atas. Aplikasikan di pagi hari saat stomata terbuka.",
+      "rekomendasi_pupuk": true,
+      "sumber": "Permentan No. 13 Tahun 2022 & Pedoman Teknis Balitsa Kementan RI"
+    }
+  ]
+}

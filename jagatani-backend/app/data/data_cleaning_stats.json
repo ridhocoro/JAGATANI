@@ -1,0 +1,13 @@
+{
+  "total_baris_mentah": 4325,
+  "duplikat_dihapus": 5,
+  "outlier_sensor_diperbaiki_interpolasi": 3,
+  "total_baris_bersih": 4320,
+  "rentang_waktu_mulai": "2026-09-01 00:00:00",
+  "rentang_waktu_akhir": "2026-10-30 23:00:00",
+  "zona_terdata": [
+    "zone_a",
+    "zone_b",
+    "zone_c"
+  ]
+}

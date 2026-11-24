@@ -167,6 +167,33 @@ class _ControlScreenState extends State<ControlScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // AI Actuator Banner
+            GestureDetector(
+              onTap: () => context.push('/ai/recommendation'),
+              child: _buildNeuCard(
+                color: const Color(0xFFE8F5E9),
+                child: Row(
+                  children: [
+                    const Text('🌾 ', style: TextStyle(fontSize: 24)),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('Rekomendasi Cerdas & Failsafe AI',
+                              style: GoogleFonts.spaceGrotesk(
+                                  fontSize: 13, fontWeight: FontWeight.w800, color: AppColors.primary)),
+                          Text('Buka panel F-01, F-02, F-03, dan aktuator otomatis terproteksi.',
+                              style: GoogleFonts.spaceGrotesk(fontSize: 11, color: Colors.black54)),
+                        ],
+                      ),
+                    ),
+                    const Icon(Icons.arrow_forward_ios_rounded, size: 16),
+                  ],
+                ),
+              ),
+            ),
+
             // Mode selector
             _buildNeuCard(
               color: const Color(0xFFFFF9E6),
@@ -254,7 +281,7 @@ class _ControlScreenState extends State<ControlScreen> {
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                             decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.2),
+                              color: Colors.white.withValues(alpha: 0.2),
                               borderRadius: BorderRadius.circular(10),
                             ),
                             child: Text('${zone['crop']} · ${zone['area']}',
@@ -265,7 +292,7 @@ class _ControlScreenState extends State<ControlScreen> {
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                             decoration: BoxDecoration(
-                              color: isActive ? AppColors.accent : Colors.white.withOpacity(0.2),
+                              color: isActive ? AppColors.accent : Colors.white.withValues(alpha: 0.2),
                               border: Border.all(
                                   color: isActive ? Colors.black : Colors.white30, width: 1.5),
                               borderRadius: BorderRadius.circular(20),
@@ -398,7 +425,7 @@ class _ControlScreenState extends State<ControlScreen> {
                                             color: Colors.black)),
                                   ),
                                 );
-                              }).toList(),
+                              }),
                             ],
                           ),
                         ],
@@ -407,7 +434,7 @@ class _ControlScreenState extends State<ControlScreen> {
                   ],
                 ),
               );
-            }).toList(),
+            }),
 
             // Threshold (Auto mode)
             if (_mode == 'Auto') ...[
