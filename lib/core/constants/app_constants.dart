@@ -29,4 +29,5 @@ class AppConstants {
   static const String routeReport = '/report';
   static const String routeCommunity = '/community';
   static const String routeProfile = '/profile';
+  static const String routeNotifications = '/notifications';
 }

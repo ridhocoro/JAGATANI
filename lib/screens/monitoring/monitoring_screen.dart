@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:fl_chart/fl_chart.dart';
@@ -139,6 +140,22 @@ class _MonitoringScreenState extends State<MonitoringScreen> {
             height: 160,
             child: LineChart(
               LineChartData(
+                lineTouchData: LineTouchData(
+                  touchTooltipData: LineTouchTooltipData(
+                    getTooltipItems: (touchedSpots) {
+                      return touchedSpots.map((spot) {
+                        return LineTooltipItem(
+                          '${spot.y.toStringAsFixed(2)}${label.contains('Suhu') ? '°C' : '%'}',
+                          GoogleFonts.spaceGrotesk(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w700,
+                            fontSize: 12,
+                          ),
+                        );
+                      }).toList();
+                    },
+                  ),
+                ),
                 gridData: FlGridData(
                   show: true,
                   drawVerticalLine: false,
@@ -209,8 +226,18 @@ class _MonitoringScreenState extends State<MonitoringScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.background,
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
+        if (context.canPop()) {
+          context.pop();
+        } else {
+          context.go('/dashboard');
+        }
+      },
+      child: Scaffold(
+        backgroundColor: AppColors.background,
       appBar: AppBar(
         backgroundColor: AppColors.primary,
         title: Text('📊 Monitoring Sensor',
@@ -346,7 +373,7 @@ class _MonitoringScreenState extends State<MonitoringScreen> {
                                         : const Color(0xFFFAFAF8)),
                                 children: [
                                   '$hour:00',
-                                  '${temp.toStringAsFixed(1)}°C',
+                                  '${temp.toStringAsFixed(2)}°C',
                                   '$humid%',
                                   '0.0mm'
                                 ]
@@ -373,8 +400,9 @@ class _MonitoringScreenState extends State<MonitoringScreen> {
         ],
       ),
       bottomNavigationBar: _buildBottomNav(context, 1),
-    );
-  }
+    ),
+  );
+}
 
   Widget _buildBottomNav(BuildContext context, int current) {
     final items = [

@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:jaga_tani/core/theme/app_colors.dart';
+import 'package:jaga_tani/data/services/aktuator_service.dart';
+import 'package:jaga_tani/data/services/mqtt_service.dart';
 
 class ControlScreen extends StatefulWidget {
   const ControlScreen({super.key});
@@ -15,6 +18,7 @@ class _ControlScreenState extends State<ControlScreen> {
 
   final List<Map<String, dynamic>> _zones = [
     {
+      'id': 'zona_a',
       'name': 'Zona A',
       'crop': 'Padi',
       'area': '1.5 Ha',
@@ -25,6 +29,7 @@ class _ControlScreenState extends State<ControlScreen> {
       'status': 'Standby',
     },
     {
+      'id': 'zona_b',
       'name': 'Zona B',
       'crop': 'Jagung',
       'area': '0.8 Ha',
@@ -36,6 +41,7 @@ class _ControlScreenState extends State<ControlScreen> {
       'remaining': '12 menit tersisa',
     },
     {
+      'id': 'zona_c',
       'name': 'Zona C',
       'crop': 'Cabai',
       'area': '0.5 Ha',
@@ -72,6 +78,194 @@ class _ControlScreenState extends State<ControlScreen> {
       'dispensedWeek': '8 kg',
     },
   ];
+
+  String _formatRemaining(String duration) {
+    switch (duration) {
+      case '15m':
+        return '15 menit tersisa';
+      case '30m':
+        return '30 menit tersisa';
+      case '1j':
+        return '60 menit tersisa';
+      case 'Custom':
+        return '45 menit tersisa';
+      default:
+        return '$duration tersisa';
+    }
+  }
+
+  void _showFertilizerDispenseDialog(Map<String, dynamic> f, int index) {
+    String selectedZone = 'Zona A (Padi)';
+    String selectedDosis = '5 Liter (~2.5 kg)';
+    final messenger = ScaffoldMessenger.of(context);
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        side: BorderSide(color: Colors.black, width: 2),
+      ),
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setModalState) => Padding(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(ctx).viewInsets.bottom + 20,
+            left: 20,
+            right: 20,
+            top: 20,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
+                    children: [
+                      Text(f['emoji'] as String, style: const TextStyle(fontSize: 22)),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Alirkan ${f['name']}',
+                        style: GoogleFonts.spaceGrotesk(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ],
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close_rounded),
+                    onPressed: () => Navigator.pop(ctx),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Pilih zona target dan takaran larutan pupuk yang akan dialirkan melalui pipa fertigasi lahan:',
+                style: GoogleFonts.spaceGrotesk(fontSize: 12, color: Colors.black54),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'Zona Target:',
+                style: GoogleFonts.spaceGrotesk(fontSize: 12, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: ['Zona A (Padi)', 'Zona B (Jagung)', 'Zona C (Cabai)'].map((z) {
+                  final isSel = selectedZone == z;
+                  return ChoiceChip(
+                    label: Text(z),
+                    selected: isSel,
+                    selectedColor: AppColors.accent,
+                    backgroundColor: Colors.grey.shade100,
+                    labelStyle: GoogleFonts.spaceGrotesk(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.black,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      side: BorderSide(color: isSel ? Colors.black : Colors.grey.shade300, width: 1.5),
+                    ),
+                    onSelected: (val) {
+                      if (val) setModalState(() => selectedZone = z);
+                    },
+                  );
+                }).toList(),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'Dosis / Takaran Larutan:',
+                style: GoogleFonts.spaceGrotesk(fontSize: 12, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  '5 Liter (~2.5 kg)',
+                  '10 Liter (~5.0 kg)',
+                  '15 Liter (~7.5 kg)',
+                ].map((d) {
+                  final isSel = selectedDosis == d;
+                  return ChoiceChip(
+                    label: Text(d),
+                    selected: isSel,
+                    selectedColor: AppColors.accent,
+                    backgroundColor: Colors.grey.shade100,
+                    labelStyle: GoogleFonts.spaceGrotesk(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.black,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      side: BorderSide(color: isSel ? Colors.black : Colors.grey.shade300, width: 1.5),
+                    ),
+                    onSelected: (val) {
+                      if (val) setModalState(() => selectedDosis = d);
+                    },
+                  );
+                }).toList(),
+              ),
+              const SizedBox(height: 20),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      side: const BorderSide(color: Colors.black, width: 2),
+                    ),
+                  ),
+                  onPressed: () async {
+                    Navigator.pop(ctx);
+
+                    // Update persentase stok pupuk secara riil
+                    setState(() {
+                      final currentStock = f['stock'] as double;
+                      final newStock = (currentStock - 0.05).clamp(0.0, 1.0);
+                      _fertilizers[index]['stock'] = newStock;
+                      _fertilizers[index]['lastApplied'] = 'Baru saja';
+                    });
+
+                    // Catat ke log AktuatorService & notifikasi ponsel
+                    await AktuatorService.catatPemupukan(
+                      zonaId: selectedZone.split(' ').first,
+                      jenisPupuk: f['name'] as String,
+                      dosis: selectedDosis,
+                    );
+
+                    messenger.showSnackBar(
+                      SnackBar(
+                        backgroundColor: AppColors.success,
+                        content: Text(
+                          '✅ ${f['name']} berhasil dialirkan ke $selectedZone ($selectedDosis)!',
+                          style: GoogleFonts.spaceGrotesk(color: Colors.white, fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                    );
+                  },
+                  icon: const Icon(Icons.water_drop_rounded, size: 18),
+                  label: Text(
+                    'Konfirmasi Alirkan Pupuk',
+                    style: GoogleFonts.spaceGrotesk(fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 
   Widget _buildNeuCard({required Widget child, Color? color}) => Container(
         width: double.infinity,
@@ -154,8 +348,18 @@ class _ControlScreenState extends State<ControlScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.background,
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
+        if (context.canPop()) {
+          context.pop();
+        } else {
+          context.go('/dashboard');
+        }
+      },
+      child: Scaffold(
+        backgroundColor: AppColors.background,
       appBar: AppBar(
         backgroundColor: AppColors.primary,
         title: Text('🎛️ Kontrol Lahan',
@@ -329,11 +533,14 @@ class _ControlScreenState extends State<ControlScreen> {
                           ),
                           if (isActive) ...[
                             const SizedBox(height: 4),
-                            Text('⏱ ${zone['remaining']}',
-                                style: GoogleFonts.spaceGrotesk(
-                                    fontSize: 12,
-                                    color: AppColors.info,
-                                    fontWeight: FontWeight.w600)),
+                            Text(
+                              '⏱ ${zone['remaining'] ?? _formatRemaining(zone['selectedDuration'] as String? ?? '30m')}',
+                              style: GoogleFonts.spaceGrotesk(
+                                fontSize: 12,
+                                color: AppColors.info,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
                           ],
                           const SizedBox(height: 12),
                           // ON / OFF toggle
@@ -341,7 +548,32 @@ class _ControlScreenState extends State<ControlScreen> {
                             children: [
                               Expanded(
                                 child: GestureDetector(
-                                  onTap: () => setState(() => _zones[i]['isActive'] = true),
+                                  onTap: () {
+                                    final zoneId = _zones[i]['id'] as String? ?? 'zona_a';
+                                    final zoneName = _zones[i]['name'] as String;
+                                    final durStr = _zones[i]['selectedDuration'] as String? ?? '30m';
+                                    int durMinutes = 30;
+                                    if (durStr == '15m') durMinutes = 15;
+                                    if (durStr == '20m') durMinutes = 20;
+                                    if (durStr == '1j') durMinutes = 60;
+
+                                    setState(() {
+                                      _zones[i]['isActive'] = true;
+                                      _zones[i]['status'] = 'Sedang Menyiram';
+                                      _zones[i]['remaining'] = _formatRemaining(durStr);
+                                    });
+
+                                    MqttService().publishPumpCommand(true, zoneId: zoneId);
+                                    AktuatorService.triggerPompa(zonaId: zoneId, durasiMenit: durMinutes);
+
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text('Perintah Zigbee ON dikirim ke $zoneName via Gateway aktif.', style: GoogleFonts.spaceGrotesk(fontSize: 12)),
+                                        duration: const Duration(seconds: 2),
+                                        backgroundColor: AppColors.primary,
+                                      ),
+                                    );
+                                  },
                                   child: Container(
                                     padding: const EdgeInsets.symmetric(vertical: 10),
                                     decoration: BoxDecoration(
@@ -369,7 +601,27 @@ class _ControlScreenState extends State<ControlScreen> {
                               ),
                               Expanded(
                                 child: GestureDetector(
-                                  onTap: () => setState(() => _zones[i]['isActive'] = false),
+                                  onTap: () {
+                                    final zoneId = _zones[i]['id'] as String? ?? 'zona_a';
+                                    final zoneName = _zones[i]['name'] as String;
+
+                                    setState(() {
+                                      _zones[i]['isActive'] = false;
+                                      _zones[i]['status'] = 'Standby';
+                                      _zones[i]['remaining'] = null;
+                                    });
+
+                                    MqttService().publishPumpCommand(false, zoneId: zoneId);
+                                    AktuatorService.matikanPompa(zoneId);
+
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text('Pompa $zoneName berhasil dimatikan via Zigbee Gateway.', style: GoogleFonts.spaceGrotesk(fontSize: 12)),
+                                        duration: const Duration(seconds: 2),
+                                        backgroundColor: Colors.black87,
+                                      ),
+                                    );
+                                  },
                                   child: Container(
                                     padding: const EdgeInsets.symmetric(vertical: 10),
                                     decoration: BoxDecoration(
@@ -407,8 +659,14 @@ class _ControlScreenState extends State<ControlScreen> {
                               ...['15m', '30m', '1j', 'Custom'].map((d) {
                                 final isSel = zone['selectedDuration'] == d;
                                 return GestureDetector(
-                                  onTap: () =>
-                                      setState(() => _zones[i]['selectedDuration'] = d),
+                                  onTap: () {
+                                    setState(() {
+                                      _zones[i]['selectedDuration'] = d;
+                                      if (_zones[i]['isActive'] == true) {
+                                        _zones[i]['remaining'] = _formatRemaining(d);
+                                      }
+                                    });
+                                  },
                                   child: Container(
                                     margin: const EdgeInsets.only(left: 6),
                                     padding: const EdgeInsets.symmetric(
@@ -653,17 +911,9 @@ class _ControlScreenState extends State<ControlScreen> {
                               fontSize: 11, color: AppColors.textSecondary)),
                       const SizedBox(height: 12),
                       GestureDetector(
-                        onTap: () {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              backgroundColor: AppColors.success,
-                              content: Text('✅ ${f['name']} dikeluarkan!',
-                                  style: GoogleFonts.spaceGrotesk(color: Colors.white)),
-                            ),
-                          );
-                        },
+                        onTap: () => _showFertilizerDispenseDialog(f, _fertilizers.indexOf(f)),
                         child: Container(
-                          padding: const EdgeInsets.symmetric(vertical: 10),
+                          padding: const EdgeInsets.symmetric(vertical: 12),
                           decoration: BoxDecoration(
                             color: AppColors.accent,
                             border: Border.all(color: Colors.black, width: 2),
@@ -674,9 +924,21 @@ class _ControlScreenState extends State<ControlScreen> {
                             ],
                           ),
                           child: Center(
-                            child: Text('💊 Keluarkan Sekarang',
-                                style: GoogleFonts.spaceGrotesk(
-                                    fontSize: 13, fontWeight: FontWeight.w800, color: Colors.black)),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                const Icon(Icons.water_drop_rounded, size: 16, color: Colors.black),
+                                const SizedBox(width: 6),
+                                Text(
+                                  'Alirkan Pupuk ke Lahan',
+                                  style: GoogleFonts.spaceGrotesk(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w800,
+                                    color: Colors.black,
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                         ),
                       ),
@@ -688,6 +950,7 @@ class _ControlScreenState extends State<ControlScreen> {
         ),
       ),
       bottomNavigationBar: _buildBottomNav(context, 2),
-    );
-  }
+    ),
+  );
+}
 }

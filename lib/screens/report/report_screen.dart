@@ -1,7 +1,11 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:iconsax/iconsax.dart';
+import 'package:pdf/pdf.dart';
+import 'package:pdf/widgets.dart' as pw;
+import 'package:printing/printing.dart';
 import 'package:jaga_tani/core/theme/app_colors.dart';
 
 class ReportScreen extends StatefulWidget {
@@ -12,10 +16,10 @@ class ReportScreen extends StatefulWidget {
 }
 
 class _ReportScreenState extends State<ReportScreen> {
-  int _selectedMonthIndex = 6; // Oktober selected by default
+  int _selectedMonthIndex = 9; // Oktober selected by default
 
   final List<String> _months = [
-    'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt'
+    'Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'
   ];
 
   final List<Map<String, dynamic>> _summaryCards = [
@@ -81,46 +85,67 @@ class _ReportScreenState extends State<ReportScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: AppBar(
-        backgroundColor: AppColors.primary,
-        elevation: 0,
-        title: Text(
-          '📊 Laporan Lahan',
-          style: GoogleFonts.spaceGrotesk(
-            fontWeight: FontWeight.w800,
-            fontSize: 20,
-            color: Colors.white,
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
+        if (context.canPop()) {
+          context.pop();
+        } else {
+          context.go('/dashboard');
+        }
+      },
+      child: Scaffold(
+        backgroundColor: AppColors.background,
+        appBar: AppBar(
+          backgroundColor: AppColors.primary,
+          elevation: 0,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back, color: Colors.white),
+            onPressed: () {
+              if (context.canPop()) {
+                context.pop();
+              } else {
+                context.go('/dashboard');
+              }
+            },
           ),
-        ),
-        actions: [
-          IconButton(
-            icon: const Icon(Iconsax.share, color: Colors.white),
-            onPressed: () {},
+          title: Text(
+            '📊 Laporan Lahan',
+            style: GoogleFonts.spaceGrotesk(
+              fontWeight: FontWeight.w800,
+              fontSize: 20,
+              color: Colors.white,
+            ),
           ),
-        ],
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildMonthSelector(),
-            const SizedBox(height: 16),
-            _buildSummaryCards(),
-            const SizedBox(height: 20),
-            _buildBarChart(),
-            const SizedBox(height: 20),
-            _buildLineChart(),
-            const SizedBox(height: 20),
-            _buildZonePerformanceTable(),
-            const SizedBox(height: 20),
-            _buildExportButton(),
-            const SizedBox(height: 20),
-            _buildIrrigationLog(),
-            const SizedBox(height: 20),
+          actions: [
+            IconButton(
+              icon: const Icon(Iconsax.share, color: Colors.white),
+              onPressed: _shareReport,
+            ),
           ],
+        ),
+        body: SingleChildScrollView(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildMonthSelector(),
+              const SizedBox(height: 16),
+              _buildSummaryCards(),
+              const SizedBox(height: 20),
+              _buildBarChart(),
+              const SizedBox(height: 20),
+              _buildLineChart(),
+              const SizedBox(height: 20),
+              _buildZonePerformanceTable(),
+              const SizedBox(height: 20),
+              _buildExportButton(),
+              const SizedBox(height: 20),
+              _buildIrrigationLog(),
+              const SizedBox(height: 20),
+            ],
+          ),
         ),
       ),
     );
@@ -397,7 +422,7 @@ class _ReportScreenState extends State<ReportScreen> {
                   touchTooltipData: LineTouchTooltipData(
                     getTooltipItems: (spots) => spots.map((spot) {
                       return LineTooltipItem(
-                        '${spot.y.toStringAsFixed(1)}%',
+                        '${spot.y.toStringAsFixed(2)}%',
                         GoogleFonts.spaceGrotesk(
                           color: Colors.white,
                           fontWeight: FontWeight.w700,
@@ -625,14 +650,7 @@ class _ReportScreenState extends State<ReportScreen> {
   // ─── Export Button ────────────────────────────────────────────────────────────
   Widget _buildExportButton() {
     return GestureDetector(
-      onTap: () {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Mengekspor laporan PDF...', style: GoogleFonts.spaceGrotesk()),
-            backgroundColor: AppColors.primary,
-          ),
-        );
-      },
+      onTap: _exportPdf,
       child: Container(
         width: double.infinity,
         padding: const EdgeInsets.symmetric(vertical: 16),
@@ -689,79 +707,326 @@ class _ReportScreenState extends State<ReportScreen> {
             final idx = entry.key;
             final log = entry.value;
             final isLast = idx == _irrigationLog.length - 1;
-            return Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              decoration: BoxDecoration(
-                border: isLast
-                    ? null
-                    : const Border(bottom: BorderSide(color: Colors.black12)),
-              ),
-              child: Row(
-                children: [
-                  Container(
-                    width: 40,
-                    height: 40,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFE3F2FD),
-                      border: Border.all(color: Colors.black, width: 1.5),
-                      borderRadius: BorderRadius.circular(8),
+            return GestureDetector(
+              onTap: () => _showIrrigationDetail(log),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                decoration: BoxDecoration(
+                  border: isLast
+                      ? null
+                      : const Border(bottom: BorderSide(color: Colors.black12)),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFE3F2FD),
+                        border: Border.all(color: Colors.black, width: 1.5),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Center(
+                        child: Text('💧', style: TextStyle(fontSize: 18)),
+                      ),
                     ),
-                    child: const Center(
-                      child: Text('💧', style: TextStyle(fontSize: 18)),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Text(
-                              log['zona'],
-                              style: GoogleFonts.spaceGrotesk(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w700,
-                                color: AppColors.textPrimary,
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                              decoration: BoxDecoration(
-                                color: AppColors.success.withOpacity(0.15),
-                                border: Border.all(color: AppColors.success, width: 1),
-                                borderRadius: BorderRadius.circular(4),
-                              ),
-                              child: Text(
-                                log['status'],
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Text(
+                                log['zona'],
                                 style: GoogleFonts.spaceGrotesk(
-                                  fontSize: 10,
+                                  fontSize: 13,
                                   fontWeight: FontWeight.w700,
-                                  color: AppColors.success,
+                                  color: AppColors.textPrimary,
                                 ),
                               ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          '${log['tanggal']} • ${log['durasi']} • ${log['volume']}',
-                          style: GoogleFonts.spaceGrotesk(
-                            fontSize: 11,
-                            color: AppColors.textSecondary,
+                              const SizedBox(width: 8),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: AppColors.success.withOpacity(0.15),
+                                  border: Border.all(color: AppColors.success, width: 1),
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                                child: Text(
+                                  log['status'],
+                                  style: GoogleFonts.spaceGrotesk(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w700,
+                                    color: AppColors.success,
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
-                        ),
-                      ],
+                          const SizedBox(height: 2),
+                          Text(
+                            '${log['tanggal']} • ${log['durasi']} • ${log['volume']}',
+                            style: GoogleFonts.spaceGrotesk(
+                              fontSize: 11,
+                              color: AppColors.textSecondary,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                  const Icon(Iconsax.arrow_right_3, size: 16, color: Colors.black38),
-                ],
+                    const Icon(Iconsax.arrow_right_3, size: 16, color: Colors.black38),
+                  ],
+                ),
               ),
             );
           }),
         ],
       ),
     );
+  }
+
+  void _shareReport() {
+    final bulan = _months[_selectedMonthIndex];
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Membagikan ringkasan laporan bulan $bulan... 📤', style: GoogleFonts.spaceGrotesk(fontWeight: FontWeight.w700)),
+        backgroundColor: AppColors.primary,
+        action: SnackBarAction(
+          label: 'Export PDF',
+          textColor: AppColors.accent,
+          onPressed: _exportPdf,
+        ),
+      ),
+    );
+  }
+
+  void _showIrrigationDetail(Map<String, dynamic> log) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: const BorderSide(color: Colors.black, width: 2),
+        ),
+        backgroundColor: Colors.white,
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: const Color(0xFFE3F2FD),
+                border: Border.all(color: Colors.black, width: 1.5),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Text('💧', style: TextStyle(fontSize: 22)),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Detail Irigasi', style: GoogleFonts.spaceGrotesk(fontSize: 17, fontWeight: FontWeight.w800)),
+                  Text(log['zona'], style: GoogleFonts.spaceGrotesk(fontSize: 12, color: AppColors.primary, fontWeight: FontWeight.w700)),
+                ],
+              ),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _buildDetailRow('Tanggal', log['tanggal']),
+            _buildDetailRow('Durasi', log['durasi']),
+            _buildDetailRow('Volume Air', log['volume']),
+            _buildDetailRow('Status', log['status']),
+            _buildDetailRow('Pengaman Otomatis', 'Aktif (Hardware Failsafe OK)'),
+          ],
+        ),
+        actions: [
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primary,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+            child: Text('Tutup', style: GoogleFonts.spaceGrotesk(fontWeight: FontWeight.w700)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDetailRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(label, style: GoogleFonts.spaceGrotesk(fontSize: 12, color: AppColors.textSecondary)),
+          Text(value, style: GoogleFonts.spaceGrotesk(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.textPrimary)),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _exportPdf() async {
+    final bulan = _months[_selectedMonthIndex];
+    try {
+      final pdf = pw.Document();
+
+      pdf.addPage(
+        pw.MultiPage(
+          pageFormat: PdfPageFormat.a4,
+          margin: const pw.EdgeInsets.all(32),
+          build: (pw.Context context) {
+            return [
+              // Header
+              pw.Container(
+                padding: const pw.EdgeInsets.only(bottom: 16),
+                decoration: const pw.BoxDecoration(
+                  border: pw.Border(bottom: pw.BorderSide(width: 2, color: PdfColors.green900)),
+                ),
+                child: pw.Row(
+                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                  children: [
+                    pw.Column(
+                      crossAxisAlignment: pw.CrossAxisAlignment.start,
+                      children: [
+                        pw.Text(
+                          'JAGA TANI - SMART AGRICULTURE',
+                          style: pw.TextStyle(
+                            fontSize: 18,
+                            fontWeight: pw.FontWeight.bold,
+                            color: PdfColors.green900,
+                          ),
+                        ),
+                        pw.SizedBox(height: 4),
+                        pw.Text(
+                          'Laporan Kinerja Lahan & Manajemen Irigasi',
+                          style: const pw.TextStyle(fontSize: 12, color: PdfColors.grey700),
+                        ),
+                      ],
+                    ),
+                    pw.Column(
+                      crossAxisAlignment: pw.CrossAxisAlignment.end,
+                      children: [
+                        pw.Text(
+                          'Periode: $bulan 2026',
+                          style: pw.TextStyle(fontSize: 13, fontWeight: pw.FontWeight.bold),
+                        ),
+                        pw.SizedBox(height: 2),
+                        pw.Text(
+                          'Dibuat: ${DateTime.now().day}/${DateTime.now().month}/${DateTime.now().year}',
+                          style: const pw.TextStyle(fontSize: 10, color: PdfColors.grey600),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              pw.SizedBox(height: 20),
+
+              // Summary Section
+              pw.Text('1. Ringkasan Eksekutif', style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold)),
+              pw.SizedBox(height: 8),
+              pw.TableHelper.fromTextArray(
+                headers: ['Parameter', 'Nilai Tercatat', 'Keterangan'],
+                data: _summaryCards.map((c) => [
+                  c['label'].toString(),
+                  c['value'].toString(),
+                  c['subtitle'].toString(),
+                ]).toList(),
+                headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold, color: PdfColors.white),
+                headerDecoration: const pw.BoxDecoration(color: PdfColors.green800),
+                cellHeight: 28,
+                cellAlignments: {
+                  0: pw.Alignment.centerLeft,
+                  1: pw.Alignment.center,
+                  2: pw.Alignment.centerLeft,
+                },
+              ),
+              pw.SizedBox(height: 20),
+
+              // Zone Performance Table
+              pw.Text('2. Performa Irigasi per Zona Lahan', style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold)),
+              pw.SizedBox(height: 8),
+              pw.TableHelper.fromTextArray(
+                headers: ['Zona', 'Tanaman', 'Luas', 'Total Air', 'Pupuk', 'Skor Kesehatan'],
+                data: _zoneData.map((z) => [
+                  z['zona'].toString(),
+                  z['tanaman'].toString(),
+                  z['luas'].toString(),
+                  z['air'].toString(),
+                  z['pupuk'].toString(),
+                  '${z['skor']}/100',
+                ]).toList(),
+                headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold, color: PdfColors.white),
+                headerDecoration: const pw.BoxDecoration(color: PdfColors.green800),
+                cellHeight: 28,
+                cellAlignments: {
+                  0: pw.Alignment.centerLeft,
+                  1: pw.Alignment.center,
+                  2: pw.Alignment.center,
+                  3: pw.Alignment.center,
+                  4: pw.Alignment.center,
+                  5: pw.Alignment.center,
+                },
+              ),
+              pw.SizedBox(height: 20),
+
+              // Irrigation History Log
+              pw.Text('3. Riwayat Aktivasi Irigasi Terakhir', style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold)),
+              pw.SizedBox(height: 8),
+              pw.TableHelper.fromTextArray(
+                headers: ['Tanggal', 'Zona Sasaran', 'Durasi', 'Volume Air', 'Status Operasi'],
+                data: _irrigationLog.map((log) => [
+                  log['tanggal'].toString(),
+                  log['zona'].toString(),
+                  log['durasi'].toString(),
+                  log['volume'].toString(),
+                  log['status'].toString(),
+                ]).toList(),
+                headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold, color: PdfColors.white),
+                headerDecoration: const pw.BoxDecoration(color: PdfColors.green800),
+                cellHeight: 28,
+                cellAlignments: {
+                  0: pw.Alignment.centerLeft,
+                  1: pw.Alignment.center,
+                  2: pw.Alignment.center,
+                  3: pw.Alignment.center,
+                  4: pw.Alignment.center,
+                },
+              ),
+
+              pw.SizedBox(height: 30),
+              pw.Divider(color: PdfColors.grey400),
+              pw.Row(
+                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                children: [
+                  pw.Text('Jaga Tani Mobile IoT Gateway • Otomasi Berbasis Edge AI', style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey600)),
+                  pw.Text('Status Verifikasi: VALID', style: pw.TextStyle(fontSize: 9, fontWeight: pw.FontWeight.bold, color: PdfColors.green800)),
+                ],
+              ),
+            ];
+          },
+        ),
+      );
+
+      await Printing.layoutPdf(
+        onLayout: (PdfPageFormat format) async => pdf.save(),
+        name: 'Laporan_JagaTani_$bulan.pdf',
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Gagal mengekspor PDF: $e', style: GoogleFonts.spaceGrotesk()),
+            backgroundColor: AppColors.danger,
+          ),
+        );
+      }
+    }
   }
 }

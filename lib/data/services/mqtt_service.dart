@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:mqtt_client/mqtt_client.dart';
 import 'package:mqtt_client/mqtt_server_client.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:jaga_tani/data/services/notification_service.dart';
 import 'package:jaga_tani/data/models/sensor_data.dart';
 
 class MqttService extends ChangeNotifier {
@@ -48,6 +49,8 @@ class MqttService extends ChangeNotifier {
   DateTime get lastUpdate => _lastUpdate;
 
   Timer? _simulationTimer;
+  DateTime? _lastAlertSoilTime;
+  DateTime? _lastRainAlertTime;
 
   SensorData get currentSensorData => SensorData(
         timestamp: _lastUpdate,
@@ -197,16 +200,49 @@ class MqttService extends ChangeNotifier {
           _airHumidity = ((jsonMap['humidity'] ?? jsonMap['airHumidity']) as num).toDouble();
         }
         _lastUpdate = DateTime.now();
+        
+        // Cek Peringatan Kritis Kelembaban Rendah
+        if (_soilHumidity < 40.0) {
+          if (_lastAlertSoilTime == null ||
+              DateTime.now().difference(_lastAlertSoilTime!).inMinutes >= 15) {
+            _lastAlertSoilTime = DateTime.now();
+            NotificationService().showPhoneNotification(
+              title: '🚨 Peringatan: Tanah Kritis (<40%)',
+              body: 'Kelembaban tanah saat ini $_soilHumidity%. Tanaman membutuhkan irigasi segera.',
+              category: NotificationCategory.critical,
+            );
+          }
+        }
+
+        // Cek Proteksi Hujan Terpicu
+        if (_isRaining && _rainfallAmount > 0.5) {
+          if (_lastRainAlertTime == null ||
+              DateTime.now().difference(_lastRainAlertTime!).inMinutes >= 30) {
+            _lastRainAlertTime = DateTime.now();
+            NotificationService().showPhoneNotification(
+              title: '⛈️ Proteksi Hujan: Irigasi Dikunci',
+              body: 'Hujan terdeteksi ($_rainfallAmount mm). Pompa ditahan untuk mencegah genangan air.',
+              category: NotificationCategory.critical,
+            );
+          }
+        }
+
         notifyListeners();
       }
     } catch (_) {}
   }
 
-  void publishPumpCommand(bool turnOn) {
+  void publishPumpCommand(bool turnOn, {String? zoneId}) {
     if (_client != null && _isConnected) {
       final builder = MqttClientPayloadBuilder();
-      builder.addString(json.encode({'state': turnOn ? 'ON' : 'OFF', 'timestamp': DateTime.now().toIso8601String()}));
-      _client!.publishMessage(pumpTopic, MqttQos.atLeastOnce, builder.payload!);
+      final targetZone = zoneId ?? 'all';
+      builder.addString(json.encode({
+        'state': turnOn ? 'ON' : 'OFF',
+        'zona_id': targetZone,
+        'timestamp': DateTime.now().toIso8601String()
+      }));
+      final targetTopic = zoneId != null ? '$pumpTopic/$zoneId' : pumpTopic;
+      _client!.publishMessage(targetTopic, MqttQos.atLeastOnce, builder.payload!);
     }
   }
 

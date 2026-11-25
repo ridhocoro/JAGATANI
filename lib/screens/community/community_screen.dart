@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:jaga_tani/core/theme/app_colors.dart';
@@ -101,59 +102,80 @@ class _CommunityScreenState extends State<CommunityScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: AppBar(
-        backgroundColor: AppColors.primary,
-        elevation: 0,
-        title: Text(
-          '👥 Komunitas Tani',
-          style: GoogleFonts.spaceGrotesk(
-            fontWeight: FontWeight.w800,
-            fontSize: 20,
-            color: Colors.white,
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
+        if (context.canPop()) {
+          context.pop();
+        } else {
+          context.go('/dashboard');
+        }
+      },
+      child: Scaffold(
+        backgroundColor: AppColors.background,
+        appBar: AppBar(
+          backgroundColor: AppColors.primary,
+          elevation: 0,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back, color: Colors.white),
+            onPressed: () {
+              if (context.canPop()) {
+                context.pop();
+              } else {
+                context.go('/dashboard');
+              }
+            },
           ),
-        ),
-        actions: [
-          GestureDetector(
-            onTap: _showCreatePostSheet,
-            child: Container(
-              margin: const EdgeInsets.only(right: 12),
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: AppColors.accent,
-                border: Border.all(color: Colors.black, width: 2),
-                borderRadius: BorderRadius.circular(8),
-                boxShadow: const [BoxShadow(color: Colors.black, offset: Offset(2, 2), blurRadius: 0)],
+          title: Text(
+            '👥 Komunitas Tani',
+            style: GoogleFonts.spaceGrotesk(
+              fontWeight: FontWeight.w800,
+              fontSize: 20,
+              color: Colors.white,
+            ),
+          ),
+          actions: [
+            GestureDetector(
+              onTap: _showCreatePostSheet,
+              child: Container(
+                margin: const EdgeInsets.only(right: 12),
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: AppColors.accent,
+                  border: Border.all(color: Colors.black, width: 2),
+                  borderRadius: BorderRadius.circular(8),
+                  boxShadow: const [BoxShadow(color: Colors.black, offset: Offset(2, 2), blurRadius: 0)],
+                ),
+                child: const Icon(Iconsax.add, color: Colors.black, size: 20),
               ),
-              child: const Icon(Iconsax.add, color: Colors.black, size: 20),
             ),
-          ),
-        ],
-      ),
-      body: Column(
-        children: [
-          _buildCategoryFilter(),
-          Expanded(
-            child: ListView(
-              padding: const EdgeInsets.all(16),
-              children: [
-                _buildCreatePrompt(),
-                const SizedBox(height: 16),
-                if (_filteredPosts.isEmpty)
-                  _buildEmptyState()
-                else
-                  ..._filteredPosts
-                      .map((post) => Padding(
-                            padding: const EdgeInsets.only(bottom: 14),
-                            child: _buildPostCard(post),
-                          ))
-                      ,
-                const SizedBox(height: 8),
-              ],
+          ],
+        ),
+        body: Column(
+          children: [
+            _buildCategoryFilter(),
+            Expanded(
+              child: ListView(
+                padding: const EdgeInsets.all(16),
+                children: [
+                  _buildCreatePrompt(),
+                  const SizedBox(height: 16),
+                  if (_filteredPosts.isEmpty)
+                    _buildEmptyState()
+                  else
+                    ..._filteredPosts
+                        .map((post) => Padding(
+                              padding: const EdgeInsets.only(bottom: 14),
+                              child: _buildPostCard(post),
+                            ))
+                        ,
+                  const SizedBox(height: 8),
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -633,6 +655,60 @@ class _CommunityScreenState extends State<CommunityScreen> {
                         // Post Button
                         GestureDetector(
                           onTap: () {
+                            final title = titleController.text.trim();
+                            final content = contentController.text.trim();
+                            if (title.isEmpty || content.isEmpty) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                    'Judul dan isi postingan tidak boleh kosong!',
+                                    style: GoogleFonts.spaceGrotesk(fontWeight: FontWeight.w700),
+                                  ),
+                                  backgroundColor: AppColors.danger,
+                                ),
+                              );
+                              return;
+                            }
+
+                            Color catColor = const Color(0xFF1A4D2E);
+                            switch (selectedCategory) {
+                              case 'Hama & Penyakit':
+                                catColor = const Color(0xFFE63946);
+                                break;
+                              case 'Pupuk':
+                                catColor = const Color(0xFF9C27B0);
+                                break;
+                              case 'Irigasi':
+                                catColor = const Color(0xFF2196F3);
+                                break;
+                              case 'Pasar':
+                                catColor = const Color(0xFFFF6B35);
+                                break;
+                              case 'Cuaca':
+                                catColor = const Color(0xFF009688);
+                                break;
+                              default:
+                                catColor = const Color(0xFF1A4D2E);
+                            }
+
+                            final newPost = {
+                              'id': DateTime.now().millisecondsSinceEpoch,
+                              'avatar': '👨‍🌾',
+                              'author': 'Pak Budi Santoso',
+                              'time': 'Baru saja',
+                              'title': title,
+                              'content': content,
+                              'category': selectedCategory,
+                              'categoryColor': catColor,
+                              'likes': 0,
+                              'comments': 0,
+                            };
+
+                            setState(() {
+                              _posts.insert(0, newPost);
+                              _selectedCategory = 0; // Tampilkan 'Semua' agar postingan langsung terlihat
+                            });
+
                             Navigator.pop(context);
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(

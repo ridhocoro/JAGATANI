@@ -3,9 +3,21 @@ import 'package:http/http.dart' as http;
 import 'package:jaga_tani/data/models/ml_result_models.dart';
 
 class MlService {
-  // Gunakan localhost (untuk Windows desktop / Web) atau 10.0.2.2 (untuk Android Emulator)
-  static String baseUrl = 'http://127.0.0.1:8000';
+  // IP Server FastAPI di jaringan lokal Wi-Fi agar bisa diakses langsung dari HP fisik
+  static String baseUrl = 'http://192.168.1.10:8000';
   static const Duration requestTimeout = Duration(seconds: 4);
+
+  /// Mengubah alamat server backend secara dinamis dari aplikasi
+  static void setBaseUrl(String newUrl) {
+    var url = newUrl.trim();
+    if (!url.startsWith('http://') && !url.startsWith('https://')) {
+      url = 'http://$url';
+    }
+    if (url.endsWith('/')) {
+      url = url.substring(0, url.length - 1);
+    }
+    baseUrl = url;
+  }
 
   // In-memory cache untuk penanganan kondisi offline
   static F01MoisturePredictionResponse? _cachedF01;

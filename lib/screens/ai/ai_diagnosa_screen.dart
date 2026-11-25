@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:jaga_tani/core/theme/app_colors.dart';
 
@@ -101,11 +102,32 @@ class _AiDiagnosaScreenState extends State<AiDiagnosaScreen>
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: AppBar(
-        backgroundColor: AppColors.primary,
-        title: Text('🔬 Diagnosa Tanaman AI',
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) {
+        if (didPop) return;
+        if (context.canPop()) {
+          context.pop();
+        } else {
+          context.go('/ai');
+        }
+      },
+      child: Scaffold(
+        backgroundColor: AppColors.background,
+        appBar: AppBar(
+          backgroundColor: AppColors.primary,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: 20),
+            tooltip: 'Kembali',
+            onPressed: () {
+              if (context.canPop()) {
+                context.pop();
+              } else {
+                context.go('/ai');
+              }
+            },
+          ),
+          title: Text('🔬 Diagnosa Tanaman AI',
             style: GoogleFonts.spaceGrotesk(
                 color: Colors.white, fontWeight: FontWeight.w800, fontSize: 18)),
       ),
@@ -577,8 +599,9 @@ class _AiDiagnosaScreenState extends State<AiDiagnosaScreen>
           ],
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 
   Widget _buildResultSection(String title, Color bg, {required Widget child}) =>
       Container(

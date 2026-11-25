@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:jaga_tani/core/theme/app_colors.dart';
@@ -472,22 +473,122 @@ class _AiRecommendationScreenState extends State<AiRecommendationScreen> {
     );
   }
 
+  void _showServerConfigDialog() {
+    final controller = TextEditingController(text: MlService.baseUrl);
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: const BorderSide(color: Colors.black, width: 2),
+        ),
+        title: Row(
+          children: [
+            const Text('🌐 ', style: TextStyle(fontSize: 20)),
+            Text(
+              'Alamat Server Backend',
+              style: GoogleFonts.spaceGrotesk(fontWeight: FontWeight.w800, fontSize: 16),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Masukkan IP host laptop/PC yang menjalankan backend FastAPI di jaringan Wi-Fi yang sama.',
+              style: GoogleFonts.spaceGrotesk(fontSize: 12, color: Colors.black87),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: controller,
+              decoration: InputDecoration(
+                hintText: 'http://192.168.1.10:8000',
+                labelText: 'URL Server Backend',
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text('Batal', style: GoogleFonts.spaceGrotesk(color: Colors.black54)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primary,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+                side: const BorderSide(color: Colors.black, width: 1.5),
+              ),
+            ),
+            onPressed: () {
+              Navigator.pop(ctx);
+              MlService.setBaseUrl(controller.text.trim());
+              _loadAllMlData();
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('Alamat server diubah ke: ${MlService.baseUrl}'),
+                  backgroundColor: AppColors.success,
+                ),
+              );
+            },
+            child: Text('Simpan & Hubungkan', style: GoogleFonts.spaceGrotesk(fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: AppBar(
-        backgroundColor: AppColors.primary,
-        elevation: 0,
-        title: Text(
-          '🌾 Rekomendasi Cerdas (AI & Pakar)',
-          style: GoogleFonts.spaceGrotesk(
-            color: Colors.white,
-            fontWeight: FontWeight.w800,
-            fontSize: 17,
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
+        if (context.canPop()) {
+          context.pop();
+        } else {
+          context.go('/dashboard');
+        }
+      },
+      child: Scaffold(
+        backgroundColor: AppColors.background,
+        appBar: AppBar(
+          backgroundColor: AppColors.primary,
+          elevation: 0,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: 20),
+            tooltip: 'Kembali',
+            onPressed: () {
+              if (context.canPop()) {
+                context.pop();
+              } else {
+                context.go('/dashboard');
+              }
+            },
+          ),
+          title: FittedBox(
+          fit: BoxFit.scaleDown,
+          alignment: Alignment.centerLeft,
+          child: Text(
+            '🌾 Rekomendasi Cerdas AI',
+            style: GoogleFonts.spaceGrotesk(
+              color: Colors.white,
+              fontWeight: FontWeight.w800,
+              fontSize: 17,
+            ),
           ),
         ),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.settings_ethernet_rounded, color: Colors.white),
+            tooltip: 'Konfigurasi IP Server Backend',
+            onPressed: _showServerConfigDialog,
+          ),
           IconButton(
             icon: const Icon(Icons.refresh_rounded, color: Colors.white),
             tooltip: 'Segarkan Data',
@@ -528,14 +629,15 @@ class _AiRecommendationScreenState extends State<AiRecommendationScreen> {
                 ],
               ),
             ),
+      ),
     );
   }
 
   Widget _buildZoneSelector() {
     final zones = [
-      {'id': 'zone_a', 'label': 'Zona A (Padi)'},
-      {'id': 'zone_b', 'label': 'Zona B (Jagung)'},
-      {'id': 'zone_c', 'label': 'Zona C (Cabai)'},
+      {'id': 'zone_a', 'name': 'Zona A', 'crop': 'Padi'},
+      {'id': 'zone_b', 'name': 'Zona B', 'crop': 'Jagung'},
+      {'id': 'zone_c', 'name': 'Zona C', 'crop': 'Cabai'},
     ];
 
     return Row(
@@ -547,7 +649,8 @@ class _AiRecommendationScreenState extends State<AiRecommendationScreen> {
             child: InkWell(
               onTap: () => _onZoneChanged(z['id']!),
               child: Container(
-                padding: const EdgeInsets.symmetric(vertical: 10),
+                height: 54,
+                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
                 decoration: BoxDecoration(
                   color: isSelected ? AppColors.accent : Colors.white,
                   border: Border.all(color: Colors.black, width: 2),
@@ -556,15 +659,26 @@ class _AiRecommendationScreenState extends State<AiRecommendationScreen> {
                       ? const [BoxShadow(color: Colors.black, offset: Offset(3, 3))]
                       : const [BoxShadow(color: Colors.black26, offset: Offset(2, 2))],
                 ),
-                child: Center(
-                  child: Text(
-                    z['label']!,
-                    style: GoogleFonts.spaceGrotesk(
-                      fontSize: 12,
-                      fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
-                      color: AppColors.textPrimary,
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      z['name']!,
+                      style: GoogleFonts.spaceGrotesk(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.textPrimary,
+                      ),
                     ),
-                  ),
+                    Text(
+                      '(${z['crop']!})',
+                      style: GoogleFonts.spaceGrotesk(
+                        fontSize: 10.5,
+                        fontWeight: FontWeight.w600,
+                        color: isSelected ? Colors.black87 : AppColors.textSecondary,
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),
@@ -645,34 +759,39 @@ class _AiRecommendationScreenState extends State<AiRecommendationScreen> {
 
   Widget _buildOfflineStatusBanner() {
     final isOffline = _f01Data?.status == 'offline_cache';
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        color: isOffline ? const Color(0xFFFFF3CD) : const Color(0xFFD1E7DD),
-        border: Border.all(color: Colors.black, width: 1.5),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Row(
-        children: [
-          Icon(
-            isOffline ? Icons.cloud_off_rounded : Icons.cloud_done_rounded,
-            size: 18,
-            color: isOffline ? Colors.orange[800] : Colors.green[800],
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              isOffline
-                  ? 'Mode Cadangan Offline: Menampilkan inferensi lokal tersimpan'
-                  : 'Terhubung ke Backend AI FastAPI • Inferensi Real-Time Aktif',
-              style: GoogleFonts.spaceGrotesk(
-                fontSize: 11,
-                fontWeight: FontWeight.w700,
-                color: Colors.black87,
+    return InkWell(
+      onTap: _showServerConfigDialog,
+      borderRadius: BorderRadius.circular(8),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: isOffline ? const Color(0xFFFFF3CD) : const Color(0xFFD1E7DD),
+          border: Border.all(color: Colors.black, width: 1.5),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Row(
+          children: [
+            Icon(
+              isOffline ? Icons.cloud_off_rounded : Icons.cloud_done_rounded,
+              size: 18,
+              color: isOffline ? Colors.orange[800] : Colors.green[800],
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                isOffline
+                    ? 'Mode Cadangan Offline • Ketuk untuk ubah IP Server'
+                    : 'Terhubung ke Backend AI FastAPI • Inferensi Real-Time Aktif',
+                style: GoogleFonts.spaceGrotesk(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  color: Colors.black87,
+                ),
               ),
             ),
-          ),
-        ],
+            const Icon(Icons.edit_rounded, size: 14, color: Colors.black54),
+          ],
+        ),
       ),
     );
   }
@@ -710,18 +829,27 @@ class _AiRecommendationScreenState extends State<AiRecommendationScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                'F-02: KEPUTUSAN IRIGASI',
-                style: GoogleFonts.spaceGrotesk(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: 1.0,
-                  color: AppColors.textSecondary,
+              Expanded(
+                child: Text(
+                  'F-02: KEPUTUSAN IRIGASI',
+                  style: GoogleFonts.spaceGrotesk(
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 0.5,
+                    color: AppColors.textSecondary,
+                  ),
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
-              badge,
+              const SizedBox(width: 8),
+              Flexible(
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerRight,
+                  child: badge,
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 12),
@@ -916,27 +1044,36 @@ class _AiRecommendationScreenState extends State<AiRecommendationScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                'F-01: PREDIKSI KELEMBABAN 24 JAM',
-                style: GoogleFonts.spaceGrotesk(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: 1.0,
-                  color: AppColors.textSecondary,
+              Expanded(
+                child: Text(
+                  'F-01: PREDIKSI KELEMBABAN 24 JAM',
+                  style: GoogleFonts.spaceGrotesk(
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 0.5,
+                    color: AppColors.textSecondary,
+                  ),
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: AppColors.accent,
-                  border: Border.all(color: Colors.black, width: 1.5),
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: Text(
-                  'MAE: ${p.mae}% • ±${p.rmse}%',
-                  style: GoogleFonts.spaceGrotesk(fontSize: 11, fontWeight: FontWeight.bold),
+              const SizedBox(width: 8),
+              Flexible(
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerRight,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: AppColors.accent,
+                      border: Border.all(color: Colors.black, width: 1.5),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Text(
+                      'MAE: ${p.mae}% • ±${p.rmse}%',
+                      style: GoogleFonts.spaceGrotesk(fontSize: 10.5, fontWeight: FontWeight.bold),
+                    ),
+                  ),
                 ),
               ),
             ],
@@ -956,6 +1093,22 @@ class _AiRecommendationScreenState extends State<AiRecommendationScreen> {
             height: 190,
             child: LineChart(
               LineChartData(
+                lineTouchData: LineTouchData(
+                  touchTooltipData: LineTouchTooltipData(
+                    getTooltipItems: (touchedSpots) {
+                      return touchedSpots.map((spot) {
+                        return LineTooltipItem(
+                          '${spot.y.toStringAsFixed(2)}%',
+                          GoogleFonts.spaceGrotesk(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w700,
+                            fontSize: 12,
+                          ),
+                        );
+                      }).toList();
+                    },
+                  ),
+                ),
                 minY: 10,
                 maxY: 80,
                 gridData: FlGridData(
@@ -1059,21 +1212,29 @@ class _AiRecommendationScreenState extends State<AiRecommendationScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                'F-03: SISTEM PAKAR PEMUPUKAN',
-                style: GoogleFonts.spaceGrotesk(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: 1.0,
-                  color: AppColors.textSecondary,
+              Expanded(
+                child: Text(
+                  'F-03: REKOMENDASI PUPUK',
+                  style: GoogleFonts.spaceGrotesk(
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 0.5,
+                    color: AppColors.textSecondary,
+                  ),
                 ),
               ),
-              NeuBadge(
-                label: f.bolehMemupuk ? '🌱 DAPAT MEMUPUK' : '⏳ TUNDA / KOREKSI',
-                color: f.bolehMemupuk ? AppColors.success : AppColors.warning,
-                textColor: Colors.white,
+              const SizedBox(width: 8),
+              Flexible(
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerRight,
+                  child: NeuBadge(
+                    label: f.bolehMemupuk ? '🌱 DAPAT MEMUPUK' : '⏳ TUNDA / KOREKSI',
+                    color: f.bolehMemupuk ? AppColors.success : AppColors.warning,
+                    textColor: Colors.white,
+                  ),
+                ),
               ),
             ],
           ),
@@ -1105,17 +1266,14 @@ class _AiRecommendationScreenState extends State<AiRecommendationScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
-                    children: [
-                      Text(
-                        '[${rule.idAturan}] ${rule.judul}',
-                        style: GoogleFonts.spaceGrotesk(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w800,
-                          color: rule.status == 'warning' ? Colors.orange[900] : Colors.green[900],
-                        ),
-                      ),
-                    ],
+                  Text(
+                    '[${rule.idAturan}] ${rule.judul}',
+                    style: GoogleFonts.spaceGrotesk(
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w800,
+                      color: rule.status == 'warning' ? Colors.orange[900] : Colors.green[900],
+                    ),
+                    softWrap: true,
                   ),
                   const SizedBox(height: 4),
                   Text(rule.penjelasan, style: GoogleFonts.spaceGrotesk(fontSize: 11, height: 1.3)),
@@ -1185,17 +1343,20 @@ class _AiRecommendationScreenState extends State<AiRecommendationScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                '📋 RIWAYAT AKSI AKTUATOR & PEMUPUKAN',
-                style: GoogleFonts.spaceGrotesk(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: 1.0,
-                  color: AppColors.textSecondary,
+              Expanded(
+                child: Text(
+                  '📋 RIWAYAT AKSI & PEMUPUKAN',
+                  style: GoogleFonts.spaceGrotesk(
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 0.5,
+                    color: AppColors.textSecondary,
+                  ),
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
+              const SizedBox(width: 8),
               Text(
                 '${_riwayatAksi.length} Log Terbaru',
                 style: GoogleFonts.spaceGrotesk(fontSize: 10, color: Colors.black54),
@@ -1246,17 +1407,23 @@ class _AiRecommendationScreenState extends State<AiRecommendationScreen> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Row(
-                          children: [
-                            Text(isPompa ? '💧 ' : '🌱 ', style: const TextStyle(fontSize: 14)),
-                            Text(
-                              isPompa
-                                  ? 'Pompa Irigasi (${aksi.durasiMenit ?? 15} Menit)'
-                                  : '${aksi.jenisPupuk ?? "Pupuk"} (${aksi.dosis ?? "-"})',
-                              style: GoogleFonts.spaceGrotesk(fontSize: 12, fontWeight: FontWeight.bold),
-                            ),
-                          ],
+                        Expanded(
+                          child: Row(
+                            children: [
+                              Text(isPompa ? '💧 ' : '🌱 ', style: const TextStyle(fontSize: 14)),
+                              Expanded(
+                                child: Text(
+                                  isPompa
+                                      ? 'Pompa Irigasi (${aksi.durasiMenit ?? 15} Menit)'
+                                      : '${aksi.jenisPupuk ?? "Pupuk"} (${aksi.dosis ?? "-"})',
+                                  style: GoogleFonts.spaceGrotesk(fontSize: 12, fontWeight: FontWeight.bold),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
+                        const SizedBox(width: 8),
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                           decoration: BoxDecoration(

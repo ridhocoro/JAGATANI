@@ -15,8 +15,12 @@ import 'screens/ai/ai_diagnosa_screen.dart';
 import 'screens/report/report_screen.dart';
 import 'screens/community/community_screen.dart';
 import 'screens/profile/profile_screen.dart';
+import 'screens/notification/notification_screen.dart';
+
+final GlobalKey<NavigatorState> rootNavigatorKey = GlobalKey<NavigatorState>();
 
 final GoRouter _router = GoRouter(
+  navigatorKey: rootNavigatorKey,
   initialLocation: AppConstants.routeSplash,
   routes: [
     GoRoute(
@@ -70,6 +74,10 @@ final GoRouter _router = GoRouter(
     GoRoute(
       path: AppConstants.routeProfile,
       builder: (context, state) => const ProfileScreen(),
+    ),
+    GoRoute(
+      path: AppConstants.routeNotifications,
+      builder: (context, state) => const NotificationScreen(),
     ),
   ],
 );

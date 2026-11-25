@@ -1,10 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:iconsax/iconsax.dart';
+import 'package:jaga_tani/core/constants/app_constants.dart';
 import 'package:jaga_tani/core/theme/app_colors.dart';
 import 'package:jaga_tani/data/services/mqtt_service.dart';
+import 'package:jaga_tani/data/services/notification_service.dart';
 import 'package:jaga_tani/data/services/weather_service.dart';
+import 'package:jaga_tani/widgets/exit_confirmation_dialog.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -18,6 +22,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   WeatherData? _weather;
   bool _isLoadingWeather = true;
   late final MqttService _mqtt;
+  late final NotificationService _notifService;
 
   @override
   void initState() {
@@ -27,7 +32,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
     if (!_mqtt.isConnected) {
       _mqtt.connect();
     }
+    _notifService = NotificationService();
+    _notifService.addListener(_onServiceUpdate);
     _loadWeather();
+  }
+
+  void _onServiceUpdate() {
+    if (mounted) setState(() {});
   }
 
   void _onMqttUpdate() {
@@ -47,6 +58,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   @override
   void dispose() {
     _mqtt.removeListener(_onMqttUpdate);
+    _notifService.removeListener(_onServiceUpdate);
     super.dispose();
   }
 
@@ -59,11 +71,50 @@ class _DashboardScreenState extends State<DashboardScreen> {
     _NavItem(icon: Iconsax.user,       activeIcon: Iconsax.user,      label: 'Profil',   route: '/profile'),
   ];
 
+  String _getFormattedCurrentDate() {
+    final now = DateTime.now();
+    const days = [
+      'Senin',
+      'Selasa',
+      'Rabu',
+      'Kamis',
+      'Jumat',
+      'Sabtu',
+      'Minggu',
+    ];
+    const months = [
+      'Januari',
+      'Februari',
+      'Maret',
+      'April',
+      'Mei',
+      'Juni',
+      'Juli',
+      'Agustus',
+      'September',
+      'Oktober',
+      'November',
+      'Desember',
+    ];
+    final dayName = days[now.weekday - 1];
+    final monthName = months[now.month - 1];
+    return '$dayName, ${now.day} $monthName ${now.year}';
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      body: Column(
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) async {
+        if (didPop) return;
+        final shouldExit = await showExitConfirmationDialog(context);
+        if (shouldExit) {
+          await SystemNavigator.pop();
+        }
+      },
+      child: Scaffold(
+        backgroundColor: AppColors.background,
+        body: Column(
         children: [
           // ── Header + Weather Strip ─────────────────────────────────────────
           _buildHeader(context),
@@ -105,8 +156,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
       // ── Bottom Navigation ──────────────────────────────────────────────────
       bottomNavigationBar: _buildBottomNav(context),
-    );
-  }
+    ),
+  );
+}
 
   // ══════════════════════════════════════════════════════════════════════════
   // HEADER
@@ -138,7 +190,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         ),
                         const SizedBox(height: 2),
                         Text(
-                          'Kamis, 9 Oktober 2026',
+                          _getFormattedCurrentDate(),
                           style: GoogleFonts.spaceGrotesk(
                             fontSize: 13,
                             fontWeight: FontWeight.w500,
@@ -151,7 +203,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
                   // Notification bell
                   GestureDetector(
-                    onTap: () {},
+                    onTap: () => context.push(AppConstants.routeNotifications),
                     child: Container(
                       width: 40,
                       height: 40,
@@ -168,20 +220,21 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             child: Icon(Iconsax.notification,
                                 color: Colors.white, size: 20),
                           ),
-                          Positioned(
-                            top: 6,
-                            right: 6,
-                            child: Container(
-                              width: 8,
-                              height: 8,
-                              decoration: BoxDecoration(
-                                color: AppColors.accent,
-                                shape: BoxShape.circle,
-                                border:
-                                    Border.all(color: AppColors.primary, width: 1.5),
+                          if (_notifService.unreadCount > 0)
+                            Positioned(
+                              top: 6,
+                              right: 6,
+                              child: Container(
+                                width: 9,
+                                height: 9,
+                                decoration: BoxDecoration(
+                                  color: AppColors.danger,
+                                  shape: BoxShape.circle,
+                                  border: Border.all(
+                                      color: Colors.white, width: 1.5),
+                                ),
                               ),
                             ),
-                          ),
                         ],
                       ),
                     ),
@@ -229,20 +282,24 @@ class _DashboardScreenState extends State<DashboardScreen> {
               child: Row(
                 children: [
                   Text(_weather?.emoji ?? '🌤️', style: const TextStyle(fontSize: 14)),
-                  const SizedBox(width: 6),
+                  const SizedBox(width: 8),
                   Expanded(
-                    child: Text(
-                      _isLoadingWeather
-                          ? 'Mengambil prakiraan cuaca (Open-Meteo)...'
-                          : '${_weather?.description ?? 'Cerah Berawan'}, ${_weather?.temperature.toStringAsFixed(1)}°C  |  Kelembaban ${_weather?.humidity}%  |  Angin ${_weather?.windSpeed.toStringAsFixed(1)} km/h',
-                      style: GoogleFonts.spaceGrotesk(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.white.withOpacity(0.90),
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        _isLoadingWeather
+                            ? 'Memuat prakiraan cuaca...'
+                            : '${_weather?.description ?? 'Cerah'}, ${_weather?.temperature.toStringAsFixed(1)}°C  •  RH ${_weather?.humidity}%  •  💨 ${_weather?.windSpeed.toStringAsFixed(0)} km/h',
+                        style: GoogleFonts.spaceGrotesk(
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.white.withOpacity(0.95),
+                        ),
                       ),
-                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
+                  const SizedBox(width: 8),
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                     decoration: BoxDecoration(
@@ -492,7 +549,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ),
           const SizedBox(height: 14),
           GestureDetector(
-            onTap: () => context.go('/ai/recommendation'),
+            onTap: () => context.push('/ai/recommendation'),
             child: Container(
               decoration: BoxDecoration(
                 color: AppColors.surface,
@@ -706,7 +763,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       physics: const NeverScrollableScrollPhysics(),
       crossAxisSpacing: 12,
       mainAxisSpacing: 12,
-      childAspectRatio: 1.15,
+      childAspectRatio: 0.84,
       children: sensors.map(_buildSensorCard).toList(),
     );
   }
@@ -722,17 +779,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
               color: Colors.black, offset: Offset(3.5, 3.5), blurRadius: 0),
         ],
       ),
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
               Container(
-                width: 34,
-                height: 34,
+                width: 32,
+                height: 32,
                 decoration: BoxDecoration(
-                  color: s.color.withOpacity(0.15),
+                  color: s.color.withValues(alpha: 0.15),
                   border: Border.all(color: s.color, width: 1.5),
                   borderRadius: BorderRadius.circular(8),
                 ),
@@ -754,12 +811,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
             ],
           ),
           const Spacer(),
-          Text(
-            s.value,
-            style: GoogleFonts.spaceGrotesk(
-              fontSize: 22,
-              fontWeight: FontWeight.w900,
-              color: s.isWarning ? s.statusColor : AppColors.textPrimary,
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Text(
+              s.value,
+              style: GoogleFonts.spaceGrotesk(
+                fontSize: 19,
+                fontWeight: FontWeight.w900,
+                color: s.isWarning ? s.statusColor : AppColors.textPrimary,
+              ),
             ),
           ),
           const SizedBox(height: 2),
@@ -773,21 +834,25 @@ class _DashboardScreenState extends State<DashboardScreen> {
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
           ),
-          const SizedBox(height: 4),
-          Container(
-            padding:
-                const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-            decoration: BoxDecoration(
-              color: s.statusColor.withOpacity(0.15),
-              border: Border.all(color: s.statusColor, width: 1),
-              borderRadius: BorderRadius.circular(4),
-            ),
-            child: Text(
-              s.status,
-              style: GoogleFonts.spaceGrotesk(
-                fontSize: 9,
-                fontWeight: FontWeight.w700,
-                color: s.statusColor,
+          const SizedBox(height: 6),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Container(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+              decoration: BoxDecoration(
+                color: s.statusColor.withValues(alpha: 0.15),
+                border: Border.all(color: s.statusColor, width: 1),
+                borderRadius: BorderRadius.circular(5),
+              ),
+              child: Text(
+                s.status,
+                style: GoogleFonts.spaceGrotesk(
+                  fontSize: 9.5,
+                  fontWeight: FontWeight.w700,
+                  color: s.statusColor,
+                ),
               ),
             ),
           ),
@@ -834,8 +899,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
     ];
 
     return SizedBox(
-      height: 190,
+      height: 204,
       child: ListView.separated(
+        clipBehavior: Clip.none,
+        padding: const EdgeInsets.only(top: 2, bottom: 10, right: 8),
         scrollDirection: Axis.horizontal,
         itemCount: zones.length,
         separatorBuilder: (_, __) => const SizedBox(width: 12),
@@ -965,7 +1032,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       ),
                       const SizedBox(width: 6),
                       GestureDetector(
-                        onTap: () => context.go('/control'),
+                        onTap: () => context.push('/control'),
                         child: Container(
                           padding: const EdgeInsets.symmetric(
                               horizontal: 8, vertical: 3),
@@ -1006,7 +1073,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   // QUICK ACTIONS
   // ══════════════════════════════════════════════════════════════════════════
   Widget _buildQuickActions(BuildContext context) {
-    final actions = [
+    final actions = const [
       _QuickAction(emoji: '🚿', label: 'Siram\nSekarang', route: '/control'),
       _QuickAction(emoji: '💊', label: 'Tambah\nPupuk', route: '/control'),
       _QuickAction(emoji: '📊', label: 'Laporan', route: '/report'),
@@ -1021,8 +1088,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 padding: EdgeInsets.only(
                     right: a == actions.last ? 0 : 10),
                 child: GestureDetector(
-                  onTap: () => context.go(a.route),
+                  onTap: () => context.push(a.route),
                   child: Container(
+                    height: 84,
                     decoration: BoxDecoration(
                       color: AppColors.surface,
                       border:
@@ -1035,20 +1103,27 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             blurRadius: 0),
                       ],
                     ),
-                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
                     child: Column(
-                      mainAxisSize: MainAxisSize.min,
+                      mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Text(a.emoji,
-                            style: const TextStyle(fontSize: 22)),
-                        const SizedBox(height: 6),
-                        Text(
-                          a.label,
-                          textAlign: TextAlign.center,
-                          style: GoogleFonts.spaceGrotesk(
-                            fontSize: 10,
-                            fontWeight: FontWeight.w700,
-                            color: AppColors.textPrimary,
+                            style: const TextStyle(fontSize: 20)),
+                        const SizedBox(height: 4),
+                        SizedBox(
+                          height: 28,
+                          child: Center(
+                            child: Text(
+                              a.label,
+                              textAlign: TextAlign.center,
+                              maxLines: 2,
+                              style: GoogleFonts.spaceGrotesk(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w700,
+                                height: 1.15,
+                                color: AppColors.textPrimary,
+                              ),
+                            ),
                           ),
                         ),
                       ],

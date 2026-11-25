@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:jaga_tani/core/constants/app_constants.dart';
 import 'package:jaga_tani/core/theme/app_colors.dart';
 
 class AiHubScreen extends StatelessWidget {
@@ -8,26 +10,36 @@ class AiHubScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: AppBar(
-        backgroundColor: AppColors.primary,
-        elevation: 0,
-        title: Text(
-          '🧠 Pusat AI Jaga Tani',
-          style: GoogleFonts.spaceGrotesk(
-            color: Colors.white,
-            fontWeight: FontWeight.w800,
-            fontSize: 18,
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
+        if (context.canPop()) {
+          context.pop();
+        } else {
+          context.go('/dashboard');
+        }
+      },
+      child: Scaffold(
+        backgroundColor: AppColors.background,
+        appBar: AppBar(
+          backgroundColor: AppColors.primary,
+          elevation: 0,
+          title: Text(
+            '🧠 Pusat AI Jaga Tani',
+            style: GoogleFonts.spaceGrotesk(
+              color: Colors.white,
+              fontWeight: FontWeight.w800,
+              fontSize: 18,
+            ),
           ),
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.notifications_outlined, color: Colors.white),
+              onPressed: () => context.push(AppConstants.routeNotifications),
+            ),
+          ],
         ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.notifications_outlined, color: Colors.white),
-            onPressed: () {},
-          ),
-        ],
-      ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -74,8 +86,10 @@ class AiHubScreen extends StatelessWidget {
           ],
         ),
       ),
-    );
-  }
+      bottomNavigationBar: _buildBottomNav(context, 3),
+    ),
+  );
+}
 
   Widget _buildHeroCard() {
     return Container(
@@ -511,6 +525,67 @@ class AiHubScreen extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildBottomNav(BuildContext context, int current) {
+    final items = [
+      {'icon': Icons.home_rounded, 'label': 'Beranda', 'route': '/dashboard'},
+      {'icon': Icons.show_chart, 'label': 'Monitor', 'route': '/monitoring'},
+      {'icon': Icons.tune, 'label': 'Kontrol', 'route': '/control'},
+      {'icon': Icons.auto_awesome, 'label': 'AI', 'route': '/ai'},
+      {'icon': Icons.person, 'label': 'Profil', 'route': '/profile'},
+    ];
+    return Container(
+      decoration: const BoxDecoration(
+        border: Border(top: BorderSide(color: Colors.black, width: 2)),
+        color: Colors.white,
+      ),
+      child: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: List.generate(items.length, (i) {
+              final item = items[i];
+              final isSelected = i == current;
+              return GestureDetector(
+                onTap: () => context.go(item['route'] as String),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                  decoration: isSelected
+                      ? BoxDecoration(
+                          color: AppColors.accent,
+                          border: Border.all(color: Colors.black, width: 2),
+                          borderRadius: BorderRadius.circular(10),
+                          boxShadow: const [
+                            BoxShadow(
+                                color: Colors.black,
+                                offset: Offset(2, 2),
+                                blurRadius: 0)
+                          ],
+                        )
+                      : null,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(item['icon'] as IconData,
+                          color: isSelected ? Colors.black : AppColors.textSecondary,
+                          size: 22),
+                      const SizedBox(height: 2),
+                      Text(item['label'] as String,
+                          style: GoogleFonts.spaceGrotesk(
+                              fontSize: 10,
+                              fontWeight: isSelected ? FontWeight.w800 : FontWeight.w500,
+                              color: isSelected ? Colors.black : AppColors.textSecondary)),
+                    ],
+                  ),
+                ),
+              );
+            }),
+          ),
+        ),
       ),
     );
   }
